@@ -1,0 +1,28 @@
+- name: Create Docker network
+  docker_network:
+    name: web_network
+    state: present
+
+- name: Copy backend Python script to VM
+  copy:
+    src: ../../roles/backend/files/backend.py
+    dest: /root/backend.py
+    remote_src: no
+    force: yes
+
+- name: Start backend container
+  docker_container:
+    name: backend
+    image: tiangolo/uwsgi-nginx-flask:python3.8
+    command: python3 /app/backend.py
+    volumes:
+      - /root/backend.py:/app/backend.py:ro
+    ports:
+      - "5000:5000"
+    networks:
+      - name: web_network
+    state: started
+    env:
+      BACKEND_PORT: "4000"  
+      LOG_LEVEL: "DEBUG" 
+

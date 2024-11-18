@@ -1,0 +1,53 @@
+- name: Stop and disable the system Nginx service if it exists
+  ansible.builtin.service:
+    name: nginx
+    state: stopped
+    enabled: no
+  when: "'nginx' in ansible_facts.services"
+
+
+- name: Create Docker network
+  docker_network:
+    name: web_network
+    state: present
+
+- name: Copy frontend
+  copy:
+    src: ../../roles/frontend/files/index.html
+    dest: /root/index.html
+- name: Inspect backend container and get port environment variables
+  docker_container_info:
+    name: backend
+  register: backend_info
+
+- name: Set backend port variable
+  set_fact:
+    backend_port: "{{ backend_info.container.Config.Env | select('match', '^BACKEND_PORT=') | map('regex_replace', '^BACKEND_PORT=', '') | list | first }}"
+
+- name: Template Nginx configuration with backend port
+  template:
+    src: ../../roles/frontend/templates/default.conf.j2
+    dest: /root/default.conf
+    remote_src: no
+    force: yes
+  vars:
+    backend_port: "{{ backend_port }}"
+
+
+- name: Start frontend container
+  docker_container:
+    name: frontend-container
+    image: nginx:latest
+    volumes:
+      - /root/index.html:/usr/share/nginx/html/index.html:ro
+      - /root/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    networks:
+      - name: web_network
+    state: started
+
+- name: Reload Nginx in frontend container
+  shell: docker exec frontend-container nginx -s reload
+  args:
+    executable: /bin/bash
