@@ -1,9 +1,13 @@
+- name: Check if Nginx service is installed
+  ansible.builtin.service_facts:
+
 - name: Stop and disable the system Nginx service if it exists
   ansible.builtin.service:
     name: nginx
     state: stopped
     enabled: no
   when: "'nginx' in ansible_facts.services"
+
 
 
 - name: Create Docker network

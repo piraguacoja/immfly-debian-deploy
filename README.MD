@@ -92,3 +92,4 @@ docker run --network host --rm \
   -e BACKEND_PORT -e LOG_LEVEL \
   ansible-docker /ansible/playbooks/deploy.yml
 ```
+![Screenshot of clock working](assets/clock.png)
